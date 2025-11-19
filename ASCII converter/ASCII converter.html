@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASCII converter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100dvh;
+            background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+        }
+
+        .asciibox {
+            font-size: 16px;
+            line-height: 1.1;
+            letter-spacing: 1px;
+            user-select: none;
+            text-align: left;
+            white-space: pre;
+            display: inline-block;
+            filter: contrast(1.3);
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 15px 25px;
+            border-radius: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            flex-wrap: wrap;
+            max-width: 90vw;
+        }
+
+
+
+        .mode-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #ffffff;
+            font-size: 14px;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .slider {
+            width: 60px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            outline: none;
+            border-radius: 2px;
+            appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #ffffff;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .info {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            color: #ffffff;
+            font-size: 14px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 15px 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            min-width: 200px;
+        }
+        
+        .file-input-container {
+            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding-bottom: 15px;
+        }
+        
+        .file-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #ffffff;
+            font-size: 13px;
+            font-weight: bold;
+        }
+        
+        .file-input {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        
+        .file-input::file-selector-button {
+            background: rgba(0, 255, 65, 0.8);
+            border: none;
+            padding: 4px 8px;
+            border-radius: 3px;
+            color: #000;
+            cursor: pointer;
+            margin-right: 10px;
+            font-size: 11px;
+        }
+        
+        .file-input:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(0, 255, 65, 0.6);
+        }
+
+        .loading, .error {
+            color: #ffffff;
+            font-size: 18px;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .error {
+            color: #ff4444;
+            background: rgba(255, 68, 68, 0.1);
+            border: 1px solid rgba(255, 68, 68, 0.3);
+            border-radius: 10px;
+        }
+
+        .color-palette {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 250px;
+        }
+
+        .color-item {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .color-item:hover {
+            transform: scale(1.2);
+        }
+
+
+
+        .progress-indicator {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: #ffffff;
+            padding: 20px 30px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: none;
+            z-index: 1000;
+        }
+
+        .progress-bar {
+            width: 200px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff41, #00ffff);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .palette-label {
+            color: #ffffff;
+            font-size: 12px;
+            width: 100%;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="info">
+        <div class="file-input-container">
+            <label for="fileInput" class="file-label">选择图片或GIF:</label>
+            <input type="file" id="fileInput" accept="image/*,.gif" class="file-input">
+        </div>
+        <div>帧数: <span id="frameCount">0</span></div>
+        <div>FPS: <span id="fps">0</span></div>
+        <div>分辨率: <span id="resolution">0x0</span></div>
+        <div>颜色数: <span id="colorCount">0</span></div>
+    </div>
+    
+    <div class="color-palette" id="colorPalette">
+        <div class="palette-label">检测到的原图颜色:</div>
+    </div>
+    
+    <pre class="asciibox" id="asciibox">
+        <div class="loading">正在加载GIF...</div>
+    </pre>
+    
+    <div class="controls">
+        <button class="control-btn active" id="playPauseBtn">暂停</button>
+        <button class="control-btn" id="resetBtn">重置</button>
+        
+        <div class="mode-control">
+            <span>细节:</span>
+            <div class="slider-container">
+                <input type="range" class="slider" id="detailSlider" min="2" max="15" value="4">
+                <span id="detailValue">8</span>
+            </div>
+        </div>
+        
+        <div class="mode-control">
+            <span>速度:</span>
+            <div class="slider-container">
+                <input type="range" class="slider" id="speedSlider" min="1" max="10" value="5">
+                <span id="speedValue">5</span>
+            </div>
+        </div>
+    </div>
+</body>
+
+<script type="module">
+    // 忠实原色的ASCII动画控制器
+    class FaithfulColorASCIIAnimator {
+        constructor() {
+            this.container = document.getElementById("asciibox");
+            this.fileInput = document.getElementById("fileInput");
+            this.playPauseBtn = document.getElementById("playPauseBtn");
+            this.resetBtn = document.getElementById("resetBtn");
+            this.detailSlider = document.getElementById("detailSlider");
+            this.detailValue = document.getElementById("detailValue");
+            this.speedSlider = document.getElementById("speedSlider");
+            this.speedValue = document.getElementById("speedValue");
+            this.frameCount = document.getElementById("frameCount");
+            this.fpsDisplay = document.getElementById("fps");
+            this.resolutionDisplay = document.getElementById("resolution");
+            this.colorCountDisplay = document.getElementById("colorCount");
+            this.colorPalette = document.getElementById("colorPalette");
+            
+            // 状态变量
+            this.width = 0;
+            this.height = 0;
+            this.pixelSize = 4;
+            this.frames = [];
+            this.current_frame_index = 0;
+            this.isPlaying = true;
+            this.animationSpeed = 5;
+            this.animationStarted = false;
+            
+            // 保存原始数据用于重新生成
+            this.originalImageData = null; // 静态图像数据
+            this.framesData = null; // GIF帧数据
+            
+            // 优化后的颜色分析结果
+            this.originalColors = [];
+            
+            // 防抖定时器 - 用于细节调节优化
+            this.detailDebounceTimer = null;
+    
+            
+            // 优化的字符集
+            this.charSets = {
+                color: "@#%&" // 增加一个字符提高层次感
+            };
+            
+            this.init();
+        }
+        
+        async init() {
+            // 显示初始提示
+            this.container.innerHTML = `
+                <div class="loading">
+                    请选择图片或GIF文件开始生成ASCII动画<br>
+                    <small>支持: PNG, JPG, GIF, BMP</small>
+                </div>
+            `;
+            
+            // 设置文件选择事件监听
+            this.fileInput.addEventListener('change', (e) => {
+                this.handleFileSelect(e);
+            });
+            
+            // 设置控件事件
+            this.setupControls();
+        }
+        
+        async handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // 验证文件类型
+            const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/bmp'];
+            if (!validTypes.includes(file.type)) {
+                alert('请选择有效的图片文件 (PNG, JPG, GIF, BMP)');
+                return;
+            }
+            
+            // 验证文件大小 (最大10MB)
+            if (file.size > 10 * 1024 * 1024) {
+                alert('文件大小不能超过10MB');
+                return;
+            }
+            
+            try {
+                console.log('开始加载文件:', file.name);
+                this.container.innerHTML = `<div class="loading">正在处理 ${file.name}...</div>`;
+                
+                const arrayBuffer = await file.arrayBuffer();
+                console.log(`文件大小: ${arrayBuffer.byteLength} bytes`);
+                
+                if (file.type === 'image/gif') {
+                    await this.processGIF(arrayBuffer, file.name);
+                } else {
+                    await this.processStaticImage(arrayBuffer, file.name);
+                }
+                
+            } catch (error) {
+                console.error('处理文件失败:', error);
+                this.container.innerHTML = `
+                    <div class="error">
+                        处理文件失败: ${error.message}<br>
+                        请检查文件格式是否正确。
+                    </div>
+                `;
+            }
+        }
+        
+        async processGIF(arrayBuffer, fileName) {
+            try {
+                // 动态导入gifuct-js库
+                let parseGIF, decompressFrames;
+                try {
+                    const module = await import('https://cdn.jsdelivr.net/npm/gifuct-js@2.1.2/+esm');
+                    parseGIF = module.parseGIF;
+                    decompressFrames = module.decompressFrames;
+                } catch (importError) {
+                    console.error('导入gifuct-js失败:', importError);
+                    throw new Error('无法加载GIF解码库');
+                }
+                
+                console.log('开始解析GIF...');
+                const gif = parseGIF(arrayBuffer);
+                
+                if (!gif || !gif.lsd) {
+                    throw new Error('无效的GIF文件格式');
+                }
+                
+                this.width = gif.lsd.width;
+                this.height = gif.lsd.height;
+                
+                if (this.width === 0 || this.height === 0) {
+                    throw new Error('GIF文件尺寸无效');
+                }
+                
+                this.resolutionDisplay.textContent = `${this.width}x${this.height}`;
+                console.log(`GIF尺寸: ${this.width}x${this.height}`);
+                
+                const frames = decompressFrames(gif, true);
+                if (!frames || frames.length === 0) {
+                    throw new Error('GIF文件中没有有效帧');
+                }
+                
+                console.log(`解码得到 ${frames.length} 帧`);
+                
+                // 保存原始帧数据用于动态调节
+                this.framesData = frames;
+                
+                // 使用改进的颜色提取算法分析所有帧
+                console.log('分析颜色...');
+                this.analyzeColorsFromAllFrames(frames);
+                
+                // 处理每一帧
+                this.frames = [];
+                for (let i = 0; i < frames.length; i++) {
+                    console.log(`处理第 ${i + 1} 帧...`);
+                    const processedFrame = await this.processFrame(frames[i]);
+                    if (processedFrame && processedFrame.trim()) {
+                        this.frames.push(processedFrame);
+                    }
+                }
+                
+                if (this.frames.length === 0) {
+                    throw new Error('没有成功处理任何帧');
+                }
+                
+                console.log(`总共处理 ${this.frames.length} 帧`);
+                this.frameCount.textContent = this.frames.length;
+                
+                // 显示调色板
+                if (this.originalColors && this.originalColors.length > 0) {
+                    this.displayColorPalette();
+                }
+                
+                // 设置动画已启动并开始播放
+                this.animationStarted = true;
+                this.isPlaying = true;
+                this.startAnimation();
+                
+                console.log(`ASCII动画加载完成！文件: ${fileName}`);
+                
+            } catch (error) {
+                console.error('处理GIF失败:', error);
+                throw error;
+            }
+        }
+        
+        async processStaticImage(arrayBuffer, fileName) {
+            try {
+                // 创建图像对象
+                const blob = new Blob([arrayBuffer]);
+                const imageUrl = URL.createObjectURL(blob);
+                
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = async () => {
+                        try {
+                            this.width = img.width;
+                            this.height = img.height;
+                            this.resolutionDisplay.textContent = `${this.width}x${this.height}`;
+                            
+                            console.log(`图像尺寸: ${this.width}x${this.height}`);
+                            
+                            // 创建canvas并绘制图像
+                            const canvas = document.createElement('canvas');
+                            const ctx = canvas.getContext('2d');
+                            canvas.width = this.width;
+                            canvas.height = this.height;
+                            ctx.drawImage(img, 0, 0);
+                            
+                            // 获取图像数据
+                            const imageData = ctx.getImageData(0, 0, this.width, this.height);
+                            
+                            // 保存原始图像数据用于动态调节
+                            this.originalImageData = imageData;
+                            
+                            // 分析图像颜色
+                            this.analyzeColorsFromStaticImage(imageData);
+                            
+                            // 处理单帧
+                            console.log('处理静态图像...');
+                            const processedFrame = await this.processFrameFromImageData(imageData);
+                            
+                            if (processedFrame && processedFrame.trim()) {
+                                this.frames = [processedFrame];
+                                this.frameCount.textContent = 1;
+                                
+                                // 显示调色板
+                                if (this.originalColors && this.originalColors.length > 0) {
+                                    this.displayColorPalette();
+                                }
+                                
+                                // 对于静态图像，显示第一帧并设置播放状态
+                                this.container.innerHTML = processedFrame;
+                                this.isPlaying = false;
+                                this.animationStarted = false; // 静态图像不需要动画
+                                this.playPauseBtn.textContent = '播放';
+                                this.playPauseBtn.classList.remove('active');
+                                
+                                console.log(`静态图像处理完成！文件: ${fileName}`);
+                            } else {
+                                throw new Error('处理图像时出错');
+                            }
+                            
+                            // 清理
+                            URL.revokeObjectURL(imageUrl);
+                            resolve();
+                            
+                        } catch (error) {
+                            URL.revokeObjectURL(imageUrl);
+                            reject(error);
+                        }
+                    };
+                    
+                    img.onerror = () => {
+                        URL.revokeObjectURL(imageUrl);
+                        reject(new Error('无法加载图像文件'));
+                    };
+                    
+                    img.src = imageUrl;
+                });
+                
+            } catch (error) {
+                console.error('处理静态图像失败:', error);
+                throw error;
+            }
+        }
+        
+        // 改进的颜色提取算法 - 分析所有帧
+        analyzeColorsFromAllFrames(frames) {
+            const colorMap = new Map();
+            let totalPixels = 0;
+            
+            try {
+                // 分析每帧的颜色分布
+                for (const frame of frames) {
+                    const frameWidth = frame.dims.width;
+                    const frameHeight = frame.dims.height;
+                    
+                    // 检查frame.patch数据是否有效
+                    if (!frame.patch || frame.patch.length === 0) {
+                        console.warn('跳过空帧');
+                        continue;
+                    }
+                    
+                    const canvas = document.createElement("canvas");
+                    const ctx = canvas.getContext("2d");
+                    canvas.width = frameWidth;
+                    canvas.height = frameHeight;
+                    
+                    // 使用frame的数据创建ImageData
+                    const imageData = new ImageData(
+                        new Uint8ClampedArray(frame.patch),
+                        frameWidth,
+                        frameHeight
+                    );
+                    
+                    // 确保canvas设置正确
+                    ctx.putImageData(imageData, 0, 0);
+                    
+                    // 获取该帧的正确图像数据
+                    const frameData = ctx.getImageData(0, 0, frameWidth, frameHeight);
+                    const data = frameData.data;
+                    
+                    // 采样策略：跳跃采样以提高效率，但保持颜色多样性
+                    const sampleStep = 2;
+                    
+                    for (let i = 0; i < data.length; i += 4 * sampleStep) {
+                        const r = data[i];
+                        const g = data[i + 1];
+                        const b = data[i + 2];
+                        const alpha = data[i + 3];
+                        
+                        if (alpha > 128) {
+                            // 减少颜色量化损失 - 使用更细粒度的量化
+                            const qr = Math.round(r / 16) * 16; // 从32改为16
+                            const qg = Math.round(g / 16) * 16;
+                            const qb = Math.round(b / 16) * 16;
+                            
+                            const key = `${qr},${qg},${qb}`;
+                            if (!colorMap.has(key)) {
+                                colorMap.set(key, { r: qr, g: qg, b: qb, count: 1, totalR: r, totalG: g, totalB: b });
+                            } else {
+                                const colorInfo = colorMap.get(key);
+                                colorInfo.count++;
+                                colorInfo.totalR += r;
+                                colorInfo.totalG += g;
+                                colorInfo.totalB += b;
+                            }
+                            totalPixels++;
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('颜色分析错误:', error);
+                // 如果颜色分析失败，使用默认颜色
+                this.originalColors = [
+                    { rgb: 'rgb(255, 255, 255)', hex: '#ffffff', count: 1, frequency: '1.000' },
+                    { rgb: 'rgb(0, 0, 0)', hex: '#000000', count: 1, frequency: '1.000' }
+                ];
+                return;
+            }
+            
+            // 计算平均颜色并按使用频率排序
+            const sortedColors = Array.from(colorMap.values())
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 12); // 增加到12种主要颜色
+            
+            // 计算真实平均颜色（而非量化颜色）
+            this.originalColors = sortedColors.map(c => {
+                const avgR = Math.round(c.totalR / c.count);
+                const avgG = Math.round(c.totalG / c.count);
+                const avgB = Math.round(c.totalB / c.count);
+                
+                return {
+                    rgb: `rgb(${avgR}, ${avgG}, ${avgB})`,
+                    hex: `#${((1 << 24) + (avgR << 16) + (avgG << 8) + avgB).toString(16).slice(1)}`,
+                    count: c.count,
+                    frequency: (c.count / totalPixels).toFixed(3)
+                };
+            });
+            
+            console.log('分析得到的原图颜色:', this.originalColors);
+            this.colorCountDisplay.textContent = this.originalColors.length;
+    }
+    
+    // 静态图像颜色分析方法
+    analyzeColorsFromStaticImage(imageData) {
+        const colorMap = new Map();
+        let totalPixels = 0;
+        const data = imageData.data;
+        const width = imageData.width;
+        const height = imageData.height;
+        
+        try {
+            const sampleStep = Math.max(1, Math.floor(Math.min(width, height) / 100));
+            
+            for (let y = 0; y < height; y += sampleStep) {
+                for (let x = 0; x < width; x += sampleStep) {
+                    const pixelIndex = (y * width + x) * 4;
+                    const r = data[pixelIndex];
+                    const g = data[pixelIndex + 1];
+                    const b = data[pixelIndex + 2];
+                    const alpha = data[pixelIndex + 3];
+                    
+                    if (alpha < 128) continue;
+                    
+                    const q = 16;
+                    const qr = Math.floor(r / q) * q;
+                    const qg = Math.floor(g / q) * q;
+                    const qb = Math.floor(b / q) * q;
+                    
+                    const key = `${qr},${qg},${qb}`;
+                    
+                    if (!colorMap.has(key)) {
+                        colorMap.set(key, { r: qr, g: qg, b: qb, count: 1, totalR: r, totalG: g, totalB: b });
+                    } else {
+                        const colorInfo = colorMap.get(key);
+                        colorInfo.count++;
+                        colorInfo.totalR += r;
+                        colorInfo.totalG += g;
+                        colorInfo.totalB += b;
+                    }
+                    
+                    totalPixels++;
+                }
+            }
+            
+            const colors = Array.from(colorMap.values());
+            colors.sort((a, b) => b.count - a.count);
+            
+            const maxColors = 12;
+            const topColors = colors.slice(0, maxColors);
+            
+            this.originalColors = topColors.map(c => {
+                const avgR = Math.round(c.totalR / c.count);
+                const avgG = Math.round(c.totalG / c.count);
+                const avgB = Math.round(c.totalB / c.count);
+                const frequency = (c.count / totalPixels).toFixed(3);
+                
+                return {
+                    rgb: `rgb(${avgR}, ${avgG}, ${avgB})`,
+                    hex: `#${avgR.toString(16).padStart(2, '0')}${avgG.toString(16).padStart(2, '0')}${avgB.toString(16).padStart(2, '0')}`,
+                    frequency: frequency
+                };
+            });
+            
+            console.log('分析得到的原图颜色:', this.originalColors);
+            this.colorCountDisplay.textContent = this.originalColors.length;
+            
+        } catch (error) {
+            console.error('分析静态图像颜色时出错:', error);
+            this.originalColors = [];
+            this.colorCountDisplay.textContent = 0;
+        }
+    }
+    
+    displayColorPalette() {
+            if (!this.colorPalette) {
+                console.warn('颜色调色板元素不存在');
+                return;
+            }
+            
+            // 清除现有颜色项目（保留标签）
+            const existingItems = this.colorPalette.querySelectorAll('.color-item');
+            existingItems.forEach(item => item.remove());
+            
+            // 添加新的颜色项目
+            this.originalColors.forEach((color, index) => {
+                const colorItem = document.createElement('div');
+                colorItem.className = 'color-item';
+                colorItem.style.backgroundColor = color.rgb;
+                colorItem.title = `${color.hex} (${color.frequency})`;
+                
+                // 添加点击事件，显示颜色信息
+                colorItem.addEventListener('click', () => {
+                    console.log(`颜色 ${index + 1}: ${color.rgb} - ${color.hex} - 使用频率: ${color.frequency}`);
+                });
+                
+                this.colorPalette.appendChild(colorItem);
+            });
+        }
+        
+        async processFrame(frame) {
+            try {
+                const frameWidth = frame.dims.width;
+                const frameHeight = frame.dims.height;
+                
+                // 检查frame数据
+                if (!frame.patch || frame.patch.length === 0) {
+                    console.warn('跳过空帧');
+                    return "";
+                }
+                
+                const canvas = document.createElement("canvas");
+                const ctx = canvas.getContext("2d");
+                canvas.width = frameWidth;
+                canvas.height = frameHeight;
+                
+                // 正确处理frame数据
+                const imageData = new ImageData(
+                    new Uint8ClampedArray(frame.patch),
+                    frameWidth,
+                    frameHeight
+                );
+                ctx.putImageData(imageData, 0, 0);
+                
+                // 获取该帧的正确图像数据
+                const frameData = ctx.getImageData(0, 0, frameWidth, frameHeight);
+                
+                // 生成ASCII表示 - 传递帧尺寸信息
+                return this.createASCIIFrame(frameData.data, frameWidth, frameHeight);
+            } catch (error) {
+                console.error('处理帧错误:', error);
+                return "";
+            }
+        }
+        
+        async processFrameFromImageData(imageData) {
+            try {
+                // 生成ASCII表示
+                return this.createASCIIFrame(imageData.data, imageData.width, imageData.height);
+            } catch (error) {
+                console.error('处理静态图像帧错误:', error);
+                return "";
+            }
+        }
+        
+        createASCIIFrame(data, frameWidth = this.width, frameHeight = this.height) {
+            let asciiText = "";
+            const charSet = this.charSets.color;
+            
+            try {
+                for (let y = 0; y < frameHeight; y += this.pixelSize) {
+                    let row = "";
+                    for (let x = 0; x < frameWidth; x += this.pixelSize) {
+                        // 使用帧的实际尺寸计算像素索引
+                        const pixelIndex = Math.floor(y * frameWidth + x) * 4;
+                        
+                        if (pixelIndex >= data.length) {
+                            row += " ";
+                            continue;
+                        }
+                        
+                        const r = data[pixelIndex];
+                        const g = data[pixelIndex + 1];
+                        const b = data[pixelIndex + 2];
+                        const alpha = data[pixelIndex + 3];
+                        
+                        if (alpha < 128) {
+                            row += " ";
+                            continue;
+                        }
+                        
+                        // 计算区域平均颜色 - 保持原图颜色信息
+                        let regionR = 0, regionG = 0, regionB = 0, count = 0;
+                        const regionSize = Math.min(this.pixelSize, 4);
+                        
+                        // 在区域内采样，保持高保真度
+                        for (let dy = 0; dy < regionSize; dy++) {
+                            for (let dx = 0; dx < regionSize; dx++) {
+                                const sampleX = Math.min(x + dx, frameWidth - 1);
+                                const sampleY = Math.min(y + dy, frameHeight - 1);
+                                const sampleIndex = (sampleY * frameWidth + sampleX) * 4;
+                                
+                                if (sampleIndex < data.length) {
+                                    regionR += data[sampleIndex];
+                                    regionG += data[sampleIndex + 1];
+                                    regionB += data[sampleIndex + 2];
+                                    count++;
+                                }
+                            }
+                        }
+                        
+                        if (count === 0) {
+                            row += " ";
+                            continue;
+                        }
+                        
+                        regionR = Math.round(regionR / count);
+                        regionG = Math.round(regionG / count);
+                        regionB = Math.round(regionB / count);
+                        
+                        const brightness = (regionR * 0.299 + regionG * 0.587 + regionB * 0.114) / 255;
+                        
+                        // 彩色模式 - 改进的颜色映射使用原图分析得到的颜色
+                        const charIndex = brightness < 0.33 ? 0 : brightness < 0.66 ? 1 : brightness < 0.85 ? 2 : 3;
+                        const char = charSet[charIndex] || charSet[charSet.length - 1];
+                        
+                        // 找到最接近原图的真实颜色
+                        const faithfulColor = this.findMostFaithfulColor(regionR, regionG, regionB);
+                        row += `<span style="color: ${faithfulColor}">${char}</span>`;
+                    }
+                    asciiText += row + "\n";
+                }
+            } catch (error) {
+                console.error('生成ASCII帧错误:', error);
+                return "处理帧时出错\n";
+            }
+            
+            return asciiText;
+        }
+        
+        // 改进的颜色查找算法 - 更忠实于原图
+        findMostFaithfulColor(r, g, b) {
+            if (this.originalColors.length === 0) {
+                return `rgb(${r}, ${g}, ${b})`;
+            }
+            
+            let minDistance = Infinity;
+            let mostFaithfulColor = `rgb(${r}, ${g}, ${b})`;
+            
+            // 计算与原图颜色的距离，优先考虑频率和准确性
+            for (const colorInfo of this.originalColors) {
+                const [cr, cg, cb] = colorInfo.rgb.match(/\d+/g).map(Number);
+                
+                // 改进的距离计算 - 考虑人眼感知
+                const distance = Math.sqrt(
+                    Math.pow(r - cr, 2) * 0.299 + 
+                    Math.pow(g - cg, 2) * 0.587 + 
+                    Math.pow(b - cb, 2) * 0.114
+                );
+                
+                // 考虑颜色频率权重 - 常用颜色更重要
+                const frequencyWeight = parseFloat(colorInfo.frequency) * 100;
+                const weightedDistance = distance / (1 + frequencyWeight);
+                
+                if (weightedDistance < minDistance) {
+                    minDistance = weightedDistance;
+                    mostFaithfulColor = colorInfo.rgb;
+                }
+            }
+            
+            return mostFaithfulColor;
+        }
+        
+        startAnimation() {
+            let animationId = null;
+            const baseFrameTime = 150;
+            
+            const animate = () => {
+                if (this.isPlaying && this.frames.length > 0) {
+                    const frameInterval = baseFrameTime / this.animationSpeed;
+                    this.current_frame_index = (this.current_frame_index + 1) % this.frames.length;
+                    this.container.innerHTML = this.frames[this.current_frame_index];
+                    
+                    const currentFps = Math.round(1000 / frameInterval);
+                    this.fpsDisplay.textContent = currentFps;
+                    
+                    // 立即继续下一帧，使用最新的速度设置
+                    animationId = setTimeout(() => {
+                        requestAnimationFrame(animate);
+                    }, frameInterval);
+                } else if (animationId) {
+                    clearTimeout(animationId);
+                    animationId = null;
+                }
+            };
+            
+            // 立即开始动画
+            if (this.isPlaying) {
+                requestAnimationFrame(animate);
+            }
+        }
+        
+        resetToInitialState() {
+            // 停止当前动画播放
+            this.isPlaying = false;
+            
+            // 清空所有数据
+            this.frames = [];
+            this.current_frame_index = 0;
+            this.width = 0;
+            this.height = 0;
+            this.originalImageData = null;
+            this.framesData = null;
+            this.originalColors = [];
+            this.animationStarted = false;
+            
+            // 清空文件输入
+            this.fileInput.value = '';
+            
+            // 重置控件到默认值
+            this.pixelSize = 4;
+            this.animationSpeed = 5;
+            this.detailSlider.value = 4;
+            this.speedSlider.value = 5;
+            this.detailValue.textContent = '4';
+            this.speedValue.textContent = '5';
+            
+            // 重置信息显示
+            this.frameCount.textContent = '0';
+            this.fpsDisplay.textContent = '0';
+            this.resolutionDisplay.textContent = '0x0';
+            this.colorCountDisplay.textContent = '0';
+            
+            // 清空调色板
+            this.colorPalette.innerHTML = '<div class="palette-label">检测到的原图颜色:</div>';
+            
+            // 重置播放按钮状态 - 设置为初始状态
+            this.playPauseBtn.textContent = '播放';
+            this.playPauseBtn.classList.remove('active'); // 移除active状态表示未加载文件
+            
+            // 显示初始提示
+            this.container.innerHTML = `
+                <div class="loading">
+                    请选择图片或GIF文件开始生成ASCII动画<br>
+                    <small>支持: PNG, JPG, GIF, BMP</small>
+                </div>
+            `;
+            
+            console.log('已重置到初始状态');
+        }
+
+        setupControls() {
+            // 播放控制
+            this.playPauseBtn.addEventListener('click', () => {
+                this.isPlaying = !this.isPlaying;
+                this.playPauseBtn.textContent = this.isPlaying ? '暂停' : '播放';
+            });
+            
+            // 重置
+            this.resetBtn.addEventListener('click', () => {
+                this.resetToInitialState();
+            });
+            
+            // 细节控制 - 使用防抖优化性能
+            this.detailSlider.addEventListener('input', (e) => {
+                this.pixelSize = parseInt(e.target.value);
+                this.detailValue.textContent = this.pixelSize;
+                
+                // 清除之前的定时器
+                if (this.detailDebounceTimer) {
+                    clearTimeout(this.detailDebounceTimer);
+                }
+                
+                // 防抖延迟 - 避免频繁重新生成
+                this.detailDebounceTimer = setTimeout(() => {
+                    // 实时预览效果 - 立即重新生成帧
+                    if (this.animationStarted && (this.framesData || this.originalImageData)) {
+                        // 显示调节进度提示
+                        this.container.innerHTML = '<div class="loading">正在重新生成 ASCII 帧...</div>';
+                        this.regenerateFrames();
+                    }
+                }, 300); // 300ms延迟后执行
+            });
+            
+            // 速度控制 - 实时生效且平滑过渡
+            this.speedSlider.addEventListener('input', (e) => {
+                const oldSpeed = this.animationSpeed;
+                this.animationSpeed = parseInt(e.target.value);
+                this.speedValue.textContent = this.animationSpeed;
+                
+                console.log(`动画速度已更新为: ${this.animationSpeed}`);
+                
+                // 如果正在播放，重新启动动画以使用新速度
+                if (this.isPlaying && this.animationStarted) {
+                    // 短暂停止当前动画
+                    const wasPlaying = this.isPlaying;
+                    this.isPlaying = false;
+                    
+                    // 短暂延迟后重新开始，使用新速度
+                    setTimeout(() => {
+                        this.isPlaying = wasPlaying;
+                        this.startAnimation();
+                    }, 10);
+                }
+                
+                // 显示速度提示
+                const speedText = this.animationSpeed <= 3 ? '慢' : 
+                                this.animationSpeed <= 7 ? '中' : '快';
+                this.speedValue.title = `当前速度: ${speedText} (${this.animationSpeed}/10)`;
+            });
+            
+
+            
+            // 键盘快捷键
+            document.addEventListener('keydown', (e) => {
+                // 避免在输入框中触发快捷键
+                if (e.target.tagName === 'INPUT') return;
+                
+                switch(e.code) {
+                    case 'Space':
+                        e.preventDefault();
+                        if (this.frames.length > 0) {
+                            this.playPauseBtn.click();
+                        }
+                        break;
+                    case 'KeyR':
+                        e.preventDefault();
+                        this.resetBtn.click();
+                        break;
+
+                    case 'KeyF':
+                        e.preventDefault();
+                        // 增加速度
+                        if (this.animationSpeed < 10) {
+                            this.animationSpeed++;
+                            this.speedSlider.value = this.animationSpeed;
+                            this.speedValue.textContent = this.animationSpeed;
+                            
+                            // 如果正在播放，重新启动动画以使用新速度
+                            if (this.isPlaying && this.animationStarted) {
+                                const wasPlaying = this.isPlaying;
+                                this.isPlaying = false;
+                                setTimeout(() => {
+                                    this.isPlaying = wasPlaying;
+                                    this.startAnimation();
+                                }, 10);
+                            }
+                        }
+                        break;
+                    case 'KeyS':
+                        e.preventDefault();
+                        // 减少速度
+                        if (this.animationSpeed > 1) {
+                            this.animationSpeed--;
+                            this.speedSlider.value = this.animationSpeed;
+                            this.speedValue.textContent = this.animationSpeed;
+                            
+                            // 如果正在播放，重新启动动画以使用新速度
+                            if (this.isPlaying && this.animationStarted) {
+                                const wasPlaying = this.isPlaying;
+                                this.isPlaying = false;
+                                setTimeout(() => {
+                                    this.isPlaying = wasPlaying;
+                                    this.startAnimation();
+                                }, 10);
+                            }
+                        }
+                        break;
+                }
+            });
+        }
+
+        
+        async regenerateFrames() {
+            if (this.frames.length === 0) return;
+            
+            console.log('重新生成ASCII帧...');
+            this.container.innerHTML = '<div class="loading">重新处理中...</div>';
+            
+            const oldFrames = [...this.frames];
+            this.frames = [];
+            this.current_frame_index = 0;
+            
+            try {
+                // 重新分析颜色
+                if (this.originalImageData) {
+                    // 如果有保存的静态图像数据，重新处理
+                    this.analyzeColorsFromStaticImage(this.originalImageData);
+                    
+                    // 重新生成单帧
+                    const processedFrame = await this.processFrameFromImageData(this.originalImageData);
+                    if (processedFrame && processedFrame.trim()) {
+                        this.frames = [processedFrame];
+                    }
+                } else if (this.framesData && this.framesData.length > 0) {
+                    // 如果有保存的GIF帧数据，重新处理
+                    this.analyzeColorsFromAllFrames(this.framesData);
+                    
+                    // 重新生成所有帧
+                    for (let i = 0; i < this.framesData.length; i++) {
+                        const processedFrame = await this.processFrame(this.framesData[i]);
+                        if (processedFrame && processedFrame.trim()) {
+                            this.frames.push(processedFrame);
+                        }
+                    }
+                }
+                
+                if (this.frames.length === 0) {
+                    throw new Error('重新生成失败');
+                }
+                
+                console.log(`重新生成 ${this.frames.length} 帧`);
+                this.frameCount.textContent = this.frames.length;
+                
+                // 显示调色板
+                if (this.originalColors && this.originalColors.length > 0) {
+                    this.displayColorPalette();
+                }
+                
+                // 恢复播放状态
+                this.isPlaying = true;
+                this.playPauseBtn.textContent = '暂停';
+                
+                // 重新开始动画（如果之前在播放）
+                if (this.animationStarted) {
+                    this.startAnimation();
+                } else {
+                    this.container.innerHTML = this.frames[0];
+                }
+                
+            } catch (error) {
+                console.error('重新生成帧失败:', error);
+                this.frames = oldFrames;
+                this.container.innerHTML = this.frames[this.current_frame_index] || '';
+                this.isPlaying = true;
+                this.playPauseBtn.textContent = '暂停';
+            }
+        }
+    }
+    
+    // 启动忠实原色的ASCII动画
+    new FaithfulColorASCIIAnimator();
+</script>
+
+</html>
